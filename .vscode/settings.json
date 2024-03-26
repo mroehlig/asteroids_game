@@ -1,0 +1,27 @@
+{
+  "typescript.validate.enable": true,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
+  "javascript.validate.enable": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnSave": true,
+  "editor.fontFamily": "Fira Code",
+  "editor.fontLigatures": true,
+  "editor.tabSize": 2,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "workbench.colorCustomizations": {
+    // will change the color of three dots to red
+    "editorHint.foreground": "#fb8072",
+    // will underline the entire word with dots in your chosen color
+    //"editorHint.border": "#8dd3c7",
+    "editorBracketHighlight.foreground1": "#5caeef",
+    "editorBracketHighlight.foreground2": "#dfb976",
+    "editorBracketHighlight.foreground3": "#c172d9",
+    "editorBracketHighlight.foreground4": "#4fb1bc",
+    "editorBracketHighlight.foreground5": "#97c26c",
+    "editorBracketHighlight.foreground6": "#abb2c0",
+    "editorBracketHighlight.unexpectedBracket.foreground": "#db6165"
+  },
+  "liveServer.settings.port": 5501,
+  "editor.bracketPairColorization.enabled": true,
+  "typescript.tsdk": "node_modules\\typescript\\lib"
+}
