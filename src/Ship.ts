@@ -1,7 +1,12 @@
+import Phaser from "phaser";
+import Bullet from "./Bullet";
+
 export default class Ship extends Phaser.Physics.Matter.Sprite {
   private static readonly name = "ship";
   private static readonly width = 32;
   private static readonly height = 16;
+
+  private fireTime = 0;
 
   static preload(scene: Phaser.Scene) {
     const name = Ship.name;
@@ -43,6 +48,25 @@ export default class Ship extends Phaser.Physics.Matter.Sprite {
     this.setFrictionAir(0.02);
     this.setFixedRotation();
     this.setAngle(-90);
+  }
+
+  fire(bullets: Bullet[], time: number) {
+    if (time < this.fireTime + 100) {
+      return;
+    }
+
+    const bullet = bullets.find((b) => !b.active);
+    if (!bullet) {
+      return;
+    }
+
+    this.fireTime = time;
+    bullet.fire(
+      this.x + (Math.cos(this.rotation) * Ship.width) / 2,
+      this.y + (Math.sin(this.rotation) * Ship.width) / 2,
+      this.rotation,
+      5
+    );
   }
 
   preUpdate(time: number, delta: number) {

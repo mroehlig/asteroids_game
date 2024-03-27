@@ -119,13 +119,9 @@ export default class Game extends Phaser.Scene {
 
     // Create the input.
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.input.keyboard.on("keydown-SPACE", () => {
-      const bullet = this.bullets.find((bullet) => !bullet.active);
-
-      if (bullet) {
-        bullet.fire(this.ship.x, this.ship.y, this.ship.rotation, 5);
-      }
-    });
+    // this.input.keyboard.on("keydown-SPACE", () => {
+    //   this.ship.fire(this.bullets, this.game.getTime());
+    // });
   }
 
   hitBullet(collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) {
@@ -141,7 +137,7 @@ export default class Game extends Phaser.Scene {
     enemy.world.remove(enemy.body, true);
   }
 
-  update() {
+  update(time: number) {
     if (this.cursors.left.isDown) {
       this.ship.setAngularVelocity(-0.15);
     } else if (this.cursors.right.isDown) {
@@ -151,7 +147,13 @@ export default class Game extends Phaser.Scene {
     }
 
     if (this.cursors.up.isDown) {
-      this.ship.thrust(0.001);
+      this.ship.thrust(0.0002);
+    } else if (this.cursors.down.isDown) {
+      this.ship.thrust(-0.0002);
+    }
+
+    if (this.cursors.space.isDown) {
+      this.ship.fire(this.bullets, time);
     }
   }
 }
