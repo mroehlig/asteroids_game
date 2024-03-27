@@ -2,26 +2,29 @@ import Phaser from "phaser";
 
 export default class Bullet extends Phaser.Physics.Matter.Sprite {
   private static readonly nameIdle = "bullet";
-  private static readonly radius = 2;
+  private static readonly width = 8;
+  private static readonly height = 4;
 
   static preload(scene: Phaser.Scene) {
-    const radius = Bullet.radius;
+    const width = Bullet.width;
+    const height = Bullet.height;
 
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(0x333333, 1);
     g.lineStyle(1, 0x999999, 1.0);
 
-    g.fillCircle(radius, radius, radius);
-    g.strokeCircle(radius, radius, radius);
+    g.fillRoundedRect(0, 0, width, height, height / 2);
+    g.strokeRoundedRect(0, 0, width, height, height / 2);
 
-    g.generateTexture(Bullet.nameIdle, radius * 2, radius * 2);
+    g.generateTexture(Bullet.nameIdle, width, height);
     g.destroy();
   }
 
   static getShape() {
     return {
-      type: "circle",
-      radius: Bullet.radius,
+      type: "rectangle",
+      width: Bullet.width,
+      height: Bullet.height,
     };
   }
 

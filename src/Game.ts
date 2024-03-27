@@ -13,7 +13,6 @@ export default class Game extends Phaser.Scene {
 
   // Explosion emitter.
   private explosionEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
-  private explosionTexture: Phaser.Textures.Texture;
 
   private shipCollisionCategory: number;
   private bulletCollisionCategory: number;
@@ -22,7 +21,57 @@ export default class Game extends Phaser.Scene {
 
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
 
+  private livesText: Phaser.GameObjects.Text;
+  private scoreText: Phaser.GameObjects.Text;
+  private score: number = 0;
+  private gameOverText: Phaser.GameObjects.Text;
+
   preload() {
+    // Get game width and height.
+    const { width, height } = this.game.canvas;
+
+    // Preload.
+    const progressBar = this.add.graphics();
+    const progressBox = this.add.graphics();
+    progressBox.fillStyle(0x222222, 0.8);
+    progressBox.fillRect(width / 2 - 160, height / 2 - 25, 320, 50);
+
+    const loadingText = this.make.text({
+      x: width / 2,
+      y: height / 2 - 50,
+      text: "Loading...",
+      style: {
+        font: "20px monospace",
+        color: "#ffffff",
+      },
+    });
+    loadingText.setOrigin(0.5, 0.5);
+
+    const percentText = this.make.text({
+      x: width / 2,
+      y: height / 2 + 50,
+      text: "0%",
+      style: {
+        font: "18px monospace",
+        color: "#ffffff",
+      },
+    });
+    percentText.setOrigin(0.5, 0.5);
+
+    this.load.on("progress", (value: number) => {
+      progressBar.clear();
+      progressBar.fillStyle(0xffffff, 1);
+      progressBar.fillRect(width / 2 - 150, height / 2 - 20, 300 * value, 30);
+      percentText.setText(Math.floor(value * 100) + "%");
+    });
+
+    this.load.on("complete", () => {
+      progressBar.destroy();
+      progressBox.destroy();
+      loadingText.destroy();
+      percentText.destroy();
+    });
+
     // Create game textures.
     Ship.preload(this);
     Bullet.preload(this);
@@ -74,6 +123,9 @@ export default class Game extends Phaser.Scene {
       },
       plugin: wrapBounds,
     });
+    this.ship.setOnCollide(this.ship.handleHit.bind(this.ship));
+    this.ship.setOnHit(this.onShipHit.bind(this));
+    this.ship.setOnDeath(this.onShipDeath.bind(this));
     this.add.existing(this.ship);
 
     // Create the enemies.
@@ -95,6 +147,7 @@ export default class Game extends Phaser.Scene {
           plugin: wrapBounds,
         }
       );
+      enemy.setOnDeath(this.onEnemyDeath.bind(this));
       this.add.existing(enemy);
       this.enemies.push(enemy);
     }
@@ -118,6 +171,7 @@ export default class Game extends Phaser.Scene {
           plugin: wrapBounds,
         }
       );
+      asteroid.setOnDeath(this.onEnemyDeath.bind(this));
       this.add.existing(asteroid);
       this.asteroids.push(asteroid);
     }
@@ -152,9 +206,43 @@ export default class Game extends Phaser.Scene {
 
     // Create the input.
     this.cursors = this.input.keyboard.createCursorKeys();
-    // this.input.keyboard.on("keydown-SPACE", () => {
-    //   this.ship.fire(this.bullets, this.game.getTime());
-    // });
+    this.input.keyboard.on("keydown-ENTER", () => {
+      // if (this.ship.lives <= 0) {
+      this.restart();
+      // }
+    });
+
+    // Create the lives text.
+    this.livesText = this.add.text(16, 16, "Lives: " + this.ship.lives, {
+      fontSize: "12px",
+      color: "#dddddd",
+    });
+
+    // Create the score text.
+    this.scoreText = this.add.text(width - 120, 16, "Score: 0", {
+      fontSize: "12px",
+      color: "#dddddd",
+    });
+
+    // Create the game over text.
+    this.gameOverText = this.add.text(width / 2, height / 2, "Game Over", {
+      fontSize: "32px",
+      color: "#dddddd",
+    });
+    this.gameOverText.setOrigin(0.5, 0.5);
+    this.gameOverText.setVisible(false);
+  }
+
+  restart() {
+    this.gameOverText.setVisible(false);
+    this.score = 0;
+
+    const { width, height } = this.game.canvas;
+    this.ship.reset(width, height);
+    this.enemies.forEach((e) => e.reset(width, height));
+    this.asteroids.forEach((a) => a.reset(width, height));
+
+    this.scene.restart();
   }
 
   hitBullet(collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) {
@@ -165,12 +253,28 @@ export default class Game extends Phaser.Scene {
     bullet.setVisible(false);
     bullet.world.remove(bullet.body, true);
 
-    const destroyed = enemy.handleHit();
+    enemy.handleHit();
+  }
 
+  onEnemyDeath(object: Phaser.Physics.Matter.Sprite) {
     // Emit explosion.
-    if (destroyed) {
-      this.explosionEmitter.explode(16, enemy.x, enemy.y);
-    }
+    this.explosionEmitter.explode(16, object.x, object.y);
+
+    // Update score.
+    this.score += 100;
+    this.scoreText.setText("Score: " + this.score);
+  }
+
+  onShipHit() {
+    this.livesText.setText("Lives: " + this.ship.lives);
+  }
+
+  onShipDeath(object: Phaser.Physics.Matter.Sprite) {
+    // Emit explosion.
+    this.explosionEmitter.explode(16, object.x, object.y);
+
+    // Update game over text.
+    this.gameOverText.setVisible(true);
   }
 
   update(time: number) {

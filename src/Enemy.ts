@@ -32,6 +32,9 @@ export default class Enemy extends Phaser.Physics.Matter.Sprite {
     };
   }
 
+  private lives = 10;
+  private onDeath: (object: Phaser.Physics.Matter.Sprite) => void;
+
   constructor(
     world: Phaser.Physics.Matter.World,
     x: number,
@@ -70,10 +73,33 @@ export default class Enemy extends Phaser.Physics.Matter.Sprite {
     this.on(
       Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + Enemy.nameHit,
       () => {
-        this.play(Enemy.nameIdle, true);
+        this.handleLostLife();
       }
     );
 
+    this.play(Enemy.nameIdle, true);
+  }
+
+  reset(width: number, height: number) {
+    const angle = Phaser.Math.Between(0, 360);
+    const speed = Phaser.Math.FloatBetween(1, 3);
+
+    this.setPosition(
+      Phaser.Math.Between(0, width),
+      Phaser.Math.Between(0, height)
+    );
+    this.setAngle(angle);
+
+    this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
+
+    this.setVelocityX(speed * Math.cos(angle));
+    this.setVelocityY(speed * Math.sin(angle));
+
+    this.setActive(true);
+    this.setVisible(true);
+    this.world.add(this.body);
+
+    this.lives = 10;
     this.play(Enemy.nameIdle, true);
   }
 
@@ -81,13 +107,37 @@ export default class Enemy extends Phaser.Physics.Matter.Sprite {
     super.preUpdate(time, delta);
   }
 
+  setOnDeath(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
+    this.onDeath = callback;
+  }
+
+  isPlaying(name: string) {
+    return this.anims.isPlaying && this.anims.getName() === name;
+  }
+
+  handleLostLife() {
+    this.lives--;
+
+    if (this.lives <= 0) {
+      this.handleDeath();
+    } else {
+      this.play(Enemy.nameIdle, true);
+    }
+  }
+
   handleHit() {
-    // this.setActive(false);
-    // this.setVisible(false);
-    // this.world.remove(this.body, true);
+    if (!this.isPlaying(Enemy.nameHit)) {
+      this.play(Enemy.nameHit, true);
+    }
+  }
 
-    this.play(Enemy.nameHit, true);
+  handleDeath() {
+    if (this.onDeath) {
+      this.onDeath(this);
+    }
 
-    return false;
+    this.setActive(false);
+    this.setVisible(false);
+    this.world.remove(this.body, true);
   }
 }
