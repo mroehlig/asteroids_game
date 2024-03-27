@@ -11,6 +11,10 @@ export default class Game extends Phaser.Scene {
   private enemies: Enemy[];
   private asteroids: Asteroid[];
 
+  // Explosion emitter.
+  private explosionEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+  private explosionTexture: Phaser.Textures.Texture;
+
   private shipCollisionCategory: number;
   private bulletCollisionCategory: number;
   private enemiesCollisionCategory: number;
@@ -47,20 +51,23 @@ export default class Game extends Phaser.Scene {
     // Create the bullets.
     this.bullets = [];
     for (let i = 0; i < 64; i++) {
-      const bullet = new Bullet(this.matter.world, 0, 0, "bullet", {
+      const bullet = new Bullet(this.matter.world, 0, 0, {
         collisionFilter: {
           category: this.bulletCollisionCategory,
           mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
         },
         plugin: wrapBounds,
       });
-      bullet.setOnCollide(this.hitBullet);
+      bullet.setOnCollide(
+        (collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) =>
+          this.hitBullet(collisionData)
+      );
       this.add.existing(bullet);
       this.bullets.push(bullet);
     }
 
     // Create the ship.
-    this.ship = new Ship(this.matter.world, width / 2, height / 2, "ship", {
+    this.ship = new Ship(this, this.matter.world, width / 2, height / 2, {
       collisionFilter: {
         category: this.shipCollisionCategory,
         mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
@@ -71,12 +78,11 @@ export default class Game extends Phaser.Scene {
 
     // Create the enemies.
     this.enemies = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 1; i++) {
       const enemy = new Enemy(
         this.matter.world,
         Phaser.Math.Between(0, width),
         Phaser.Math.Between(0, height),
-        "enemy",
         {
           collisionFilter: {
             category: this.enemiesCollisionCategory,
@@ -95,12 +101,11 @@ export default class Game extends Phaser.Scene {
 
     // Create the asteroids.
     this.asteroids = [];
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 4; i++) {
       const asteroid = new Asteroid(
         this.matter.world,
         Phaser.Math.Between(0, width),
         Phaser.Math.Between(0, height),
-        "asteroid",
         {
           collisionFilter: {
             category: this.asteroidsCollisionCategory,
@@ -117,6 +122,34 @@ export default class Game extends Phaser.Scene {
       this.asteroids.push(asteroid);
     }
 
+    // Create the explosion texture.
+    const explosionName = "explosion";
+    const explosionRadius = 5;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(0x333333, 1);
+    g.lineStyle(1, 0x999999, 1.0);
+    g.fillRect(0, 0, explosionRadius * 2, explosionRadius * 2);
+    g.strokeRect(0, 0, explosionRadius * 2, explosionRadius * 2);
+    g.generateTexture(explosionName, explosionRadius * 2, explosionRadius * 2);
+    g.destroy();
+
+    // Create the explosion emitter.
+    this.explosionEmitter = this.add.particles(0, 0, explosionName, {
+      emitZone: {
+        type: "random",
+        source: new Phaser.Geom.Circle(10, 10, 20),
+        quantity: 16,
+      },
+      speed: { min: -100, max: 100 },
+      angle: { min: 0, max: 360 },
+      rotate: { min: 0, max: 360 },
+      scale: { start: 1, end: 0 },
+      alpha: { min: 0.0, max: 1.0 },
+      lifespan: 1000,
+      blendMode: "ADD",
+      emitting: false,
+    });
+
     // Create the input.
     this.cursors = this.input.keyboard.createCursorKeys();
     // this.input.keyboard.on("keydown-SPACE", () => {
@@ -132,28 +165,15 @@ export default class Game extends Phaser.Scene {
     bullet.setVisible(false);
     bullet.world.remove(bullet.body, true);
 
-    enemy.setActive(false);
-    enemy.setVisible(false);
-    enemy.world.remove(enemy.body, true);
+    const destroyed = enemy.handleHit();
+
+    // Emit explosion.
+    if (destroyed) {
+      this.explosionEmitter.explode(16, enemy.x, enemy.y);
+    }
   }
 
   update(time: number) {
-    if (this.cursors.left.isDown) {
-      this.ship.setAngularVelocity(-0.15);
-    } else if (this.cursors.right.isDown) {
-      this.ship.setAngularVelocity(0.15);
-    } else {
-      this.ship.setAngularVelocity(0);
-    }
-
-    if (this.cursors.up.isDown) {
-      this.ship.thrust(0.0002);
-    } else if (this.cursors.down.isDown) {
-      this.ship.thrust(-0.0002);
-    }
-
-    if (this.cursors.space.isDown) {
-      this.ship.fire(this.bullets, time);
-    }
+    this.ship.update(this, this.cursors, this.bullets, time);
   }
 }
