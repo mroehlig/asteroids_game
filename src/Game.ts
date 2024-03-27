@@ -1,110 +1,157 @@
 import Phaser from "phaser";
-import { Bullet, Bullets } from "./Bullet";
+
+import Ship from "./Ship";
+import Bullet from "./Bullet";
+import Enemy from "./Enemy";
+import Asteroid from "./Asteroid";
 
 export default class Game extends Phaser.Scene {
-  private text: Phaser.GameObjects.Text;
+  private ship: Ship;
+  private bullets: Bullet[];
+  private enemies: Enemy[];
+  private asteroids: Asteroid[];
+
+  private shipCollisionCategory: number;
+  private bulletCollisionCategory: number;
+  private enemiesCollisionCategory: number;
+  private asteroidsCollisionCategory: number;
+
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-  private sprite: Phaser.Types.Physics.Arcade.ImageWithDynamicBody;
-  private bullets: Bullets;
 
   preload() {
-    // this.load.image("ship", "assets/ship.png");
+    // Create game textures.
+    Ship.preload(this);
+    Bullet.preload(this);
+    Enemy.preload(this);
+    Asteroid.preload(this);
   }
 
   create() {
-    // Create ship image.
-    this.createShipImage();
-    this.sprite = this.physics.add.image(400, 300, "ship");
+    // Get game width and height.
+    const { width, height } = this.game.canvas;
 
-    this.sprite.setDamping(true);
-    this.sprite.setDrag(0.99);
-    this.sprite.setMaxVelocity(200);
+    // Create world bounds wrap.
+    const wrapBounds = {
+      wrap: {
+        min: { x: 0, y: 0 },
+        max: { x: width, y: height },
+      },
+    };
 
-    // Create bullets.
-    this.createBulletImage();
-    this.bullets = this.add.existing(
-      new Bullets(this.physics.world, this, { name: "bullets" })
-    );
+    // Create the collision categories.
+    this.enemiesCollisionCategory = this.matter.world.nextCategory();
+    this.shipCollisionCategory = this.matter.world.nextCategory();
+    this.bulletCollisionCategory = this.matter.world.nextCategory();
+    this.asteroidsCollisionCategory = this.matter.world.nextCategory();
 
-    this.bullets.createMultiple({
-      key: "bullet",
-      quantity: 5,
+    // Create the bullets.
+    this.bullets = [];
+    for (let i = 0; i < 64; i++) {
+      const bullet = new Bullet(this.matter.world, 0, 0, "bullet", {
+        collisionFilter: {
+          category: this.bulletCollisionCategory,
+          mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
+        },
+        plugin: wrapBounds,
+      });
+      bullet.setOnCollide(this.hitBullet);
+      this.add.existing(bullet);
+      this.bullets.push(bullet);
+    }
+
+    // Create the ship.
+    this.ship = new Ship(this.matter.world, width / 2, height / 2, "ship", {
+      collisionFilter: {
+        category: this.shipCollisionCategory,
+        mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
+      },
+      plugin: wrapBounds,
     });
+    this.add.existing(this.ship);
 
+    // Create the enemies.
+    this.enemies = [];
+    for (let i = 0; i < 6; i++) {
+      const enemy = new Enemy(
+        this.matter.world,
+        Phaser.Math.Between(0, width),
+        Phaser.Math.Between(0, height),
+        "enemy",
+        {
+          collisionFilter: {
+            category: this.enemiesCollisionCategory,
+            mask:
+              this.shipCollisionCategory |
+              this.bulletCollisionCategory |
+              this.asteroidsCollisionCategory |
+              this.enemiesCollisionCategory,
+          },
+          plugin: wrapBounds,
+        }
+      );
+      this.add.existing(enemy);
+      this.enemies.push(enemy);
+    }
+
+    // Create the asteroids.
+    this.asteroids = [];
+    for (let i = 0; i < 16; i++) {
+      const asteroid = new Asteroid(
+        this.matter.world,
+        Phaser.Math.Between(0, width),
+        Phaser.Math.Between(0, height),
+        "asteroid",
+        {
+          collisionFilter: {
+            category: this.asteroidsCollisionCategory,
+            mask:
+              this.shipCollisionCategory |
+              this.bulletCollisionCategory |
+              this.asteroidsCollisionCategory |
+              this.enemiesCollisionCategory,
+          },
+          plugin: wrapBounds,
+        }
+      );
+      this.add.existing(asteroid);
+      this.asteroids.push(asteroid);
+    }
+
+    // Create the input.
     this.cursors = this.input.keyboard.createCursorKeys();
+    this.input.keyboard.on("keydown-SPACE", () => {
+      const bullet = this.bullets.find((bullet) => !bullet.active);
 
-    this.text = this.add.text(10, 10, "", {
-      font: "16px Courier",
-      color: "#00ff00",
+      if (bullet) {
+        bullet.fire(this.ship.x, this.ship.y, this.ship.rotation, 5);
+      }
     });
+  }
 
-    this.physics.world.on("worldbounds", (body: Phaser.Physics.Arcade.Body) => {
-      (body.gameObject as Bullet).onWorldBounds();
-    });
+  hitBullet(collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) {
+    const bullet = collisionData.bodyA.gameObject;
+    const enemy = collisionData.bodyB.gameObject;
+
+    bullet.setActive(false);
+    bullet.setVisible(false);
+    bullet.world.remove(bullet.body, true);
+
+    enemy.setActive(false);
+    enemy.setVisible(false);
+    enemy.world.remove(enemy.body, true);
   }
 
   update() {
-    if (this.cursors.up.isDown) {
-      this.physics.velocityFromRotation(
-        this.sprite.rotation,
-        200,
-        this.sprite.body.acceleration
-      );
-    } else {
-      this.sprite.setAcceleration(0);
-    }
-
     if (this.cursors.left.isDown) {
-      this.sprite.setAngularVelocity(-300);
+      this.ship.setAngularVelocity(-0.15);
     } else if (this.cursors.right.isDown) {
-      this.sprite.setAngularVelocity(300);
+      this.ship.setAngularVelocity(0.15);
     } else {
-      this.sprite.setAngularVelocity(0);
+      this.ship.setAngularVelocity(0);
     }
 
-    // Fire bullets with space key and delay.
-    if (Phaser.Input.Keyboard.JustDown(this.cursors.space)) {
-      const x = this.sprite.x;
-      const y = this.sprite.y;
-      const angle = this.sprite.rotation;
-      const speed = this.sprite.body.speed + 200;
-
-      const vx = Math.cos(angle) * speed;
-      const vy = Math.sin(angle) * speed;
-
-      this.bullets.fire(x, y, vx, vy);
+    if (this.cursors.up.isDown) {
+      this.ship.thrust(0.001);
     }
-
-    this.text.setText(`Speed: ${this.sprite.body.speed}`);
-
-    this.physics.world.wrap(this.sprite, 32);
-  }
-
-  createShipImage(width: number = 32, height: number = 16) {
-    const g = this.make.graphics({ x: 0, y: 0 }, false);
-
-    g.fillStyle(0xffffff, 1);
-    g.lineStyle(1, 0xff0000, 1.0);
-    g.beginPath();
-    g.moveTo(0, 0);
-    g.lineTo(width, height / 2);
-    g.lineTo(0, height);
-    g.lineTo(0, 0);
-    g.closePath();
-    g.fillPath();
-    g.strokePath();
-
-    g.generateTexture("ship", width, height);
-    g.destroy();
-  }
-
-  createBulletImage() {
-    const g = this.make.graphics({ x: 0, y: 0 }, false);
-
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(0, 0, 2);
-
-    g.generateTexture("bullet", 4, 4);
-    g.destroy();
   }
 }

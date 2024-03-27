@@ -5,20 +5,21 @@ import Game from "./Game";
 export default new Phaser.Game({
   type: Phaser.AUTO,
   parent: "app",
-  width: 768,
-  height: 640,
-  backgroundColor: "#4488aa",
+  width: 800,
+  height: 600,
+  backgroundColor: "#333333",
   physics: {
-    default: "arcade",
-    arcade: {
-      gravity: { x: 0, y: 0 },
+    default: "matter",
+    matter: {
       debug: true,
-      debugShowBody: true,
-      debugShowStaticBody: true,
-      debugShowVelocity: true,
-      debugVelocityColor: 0xffff00,
-      debugBodyColor: 0x0000ff,
-      debugStaticBodyColor: 0xffffff,
+      "plugins.wrap": true,
+      // plugins: {
+      //   wrap: true,
+      // },
+      gravity: {
+        x: 0,
+        y: 0,
+      },
     },
   },
   pixelArt: true,
