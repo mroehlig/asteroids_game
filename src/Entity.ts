@@ -1,10 +1,16 @@
 import Phaser from "phaser";
 
+interface EntityState {
+  name: string;
+  anim: Phaser.Animations.Animation;
+}
+
 export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
-  protected states = {
-    idle: "idle",
-    hit: "hit",
-  };
+  protected states: Map<string, EntityState> = new Map([
+    ["idle", { name: "idle", anim: null }],
+    ["hit", { name: "hit", anim: null }],
+  ]);
+
   public lives = 1;
   protected onHit: (object: Phaser.Physics.Matter.Sprite) => void;
   protected onDeath: (object: Phaser.Physics.Matter.Sprite) => void;
@@ -19,16 +25,22 @@ export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
     super(world, x, y, name, null, bodyOptions);
 
     // Create animations.
-    for (const state in this.states) {
-      this.anims.create({
-        key: state,
-        frames: [{ key: `${name}-${state}` }],
+    this.states.forEach((state: EntityState) => {
+      const anim = this.anims.create({
+        key: state.name,
+        frames: [{ key: `${name}-${state.name}` }],
+        frameRate: 24,
       });
-    }
+
+      if (anim) {
+        state.anim = anim;
+      }
+    });
 
     // Listen for animation complete event.
     this.on(
-      Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + this.states.hit,
+      Phaser.Animations.Events.ANIMATION_COMPLETE_KEY +
+        this.states.get("hit").name,
       () => {
         this.handleLostLife();
       }
@@ -63,13 +75,13 @@ export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
     if (this.lives <= 0) {
       this.handleDeath();
     } else {
-      this.play(this.states.idle, true);
+      this.play(this.states.get("idle").name, true);
     }
   }
 
   handleHit() {
-    if (!this.isPlaying(this.states.hit)) {
-      this.play(this.states.hit, true);
+    if (!this.isPlaying(this.states.get("hit").name)) {
+      this.play(this.states.get("hit").name, true);
     }
   }
 

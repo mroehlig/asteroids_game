@@ -105,6 +105,8 @@ export default class Ship extends Entity {
       alpha: { min: 0.0, max: 1.0 },
     });
 
+    this.states.get("hit").anim.repeat = 12;
+
     this.setFrictionAir(0.02);
     this.setFixedRotation();
     this.setOrigin(0.5, 0.5);
@@ -123,7 +125,7 @@ export default class Ship extends Entity {
     this.setVisible(true);
     this.world.add(this.body);
 
-    this.play(this.states.idle, true);
+    this.play(this.states.get("idle").name, true);
   }
 
   fire(bullets: Bullet[], time: number) {
@@ -183,18 +185,18 @@ export default class Ship extends Entity {
     this.lastInput = input.down;
 
     if (input.down.left) {
-      this.setAngularVelocity(-0.1);
+      this.setAngularVelocity(-0.05);
     } else if (input.down.right) {
-      this.setAngularVelocity(0.1);
+      this.setAngularVelocity(0.05);
     } else {
       this.setAngularVelocity(0);
     }
 
     const isThrusting = input.down.forward || input.down.backward;
     if (input.down.forward) {
-      this.thrust(0.0002);
+      this.thrust(0.0001);
     } else if (input.down.backward) {
-      this.thrust(-0.0002);
+      this.thrust(-0.0001);
     }
 
     if (input.down.shoot) {

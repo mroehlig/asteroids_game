@@ -150,19 +150,7 @@ export default class Game extends Phaser.Scene {
     // Create the asteroids.
     this.asteroids = [];
     for (let i = 0; i < 4; i++) {
-      const asteroid = new Asteroid(this.matter.world, width, height, {
-        collisionFilter: {
-          category: this.asteroidsCollisionCategory,
-          mask:
-            this.shipCollisionCategory |
-            this.bulletCollisionCategory |
-            this.asteroidsCollisionCategory |
-            this.enemiesCollisionCategory,
-        },
-        plugin: wrapBounds,
-      });
-      asteroid.setOnDeath(this.onEnemyDeath.bind(this));
-      this.add.existing(asteroid);
+      const asteroid = this.createAsteroid(wrapBounds, width, height);
       this.asteroids.push(asteroid);
     }
 
@@ -221,6 +209,24 @@ export default class Game extends Phaser.Scene {
     });
     this.gameOverText.setOrigin(0.5, 0.5);
     this.gameOverText.setVisible(false);
+  }
+
+  createAsteroid(wrapBounds: any = {}, width: number, height: number) {
+    const asteroid = new Asteroid(this.matter.world, width, height, {
+      collisionFilter: {
+        category: this.asteroidsCollisionCategory,
+        mask:
+          this.shipCollisionCategory |
+          this.bulletCollisionCategory |
+          this.asteroidsCollisionCategory |
+          this.enemiesCollisionCategory,
+      },
+      plugin: wrapBounds,
+    });
+    asteroid.setOnDeath(this.onEnemyDeath.bind(this));
+    this.add.existing(asteroid);
+
+    return asteroid;
   }
 
   restart() {
