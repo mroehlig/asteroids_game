@@ -71,6 +71,6 @@ export default class Asteroid extends Entity {
     this.setVisible(true);
     this.world.add(this.body);
 
-    this.play(this.states.idle, true);
+    this.play(this.states.get("idle").name, true);
   }
 }

@@ -105,6 +105,8 @@ export default class Ship extends Entity {
       alpha: { min: 0.0, max: 1.0 },
     });
 
+    this.states.get("hit").anim.repeat = 12;
+
     this.setFrictionAir(0.02);
     this.setFixedRotation();
     this.setOrigin(0.5, 0.5);
@@ -123,7 +125,7 @@ export default class Ship extends Entity {
     this.setVisible(true);
     this.world.add(this.body);
 
-    this.play(this.states.idle, true);
+    this.play(this.states.get("idle").name, true);
   }
 
   fire(bullets: Bullet[], time: number) {
