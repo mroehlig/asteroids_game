@@ -1,6 +1,9 @@
-export default class Enemy extends Phaser.Physics.Matter.Sprite {
-  private static readonly nameIdle = "enemy-idle";
-  private static readonly nameHit = "enemy-hit";
+import Phaser from "phaser";
+
+import Entity from "./Entity";
+
+export default class Enemy extends Entity {
+  private static readonly name = "enemy";
   private static readonly radius = 32;
 
   static preload(scene: Phaser.Scene) {
@@ -13,14 +16,14 @@ export default class Enemy extends Phaser.Physics.Matter.Sprite {
     g.lineStyle(1, 0x999999, 1.0);
     g.fillCircle(radius, radius, radius);
     g.strokeCircle(radius, radius, radius);
-    g.generateTexture(Enemy.nameIdle, radius * 2, radius * 2);
+    g.generateTexture(Enemy.name + "-idle", radius * 2, radius * 2);
 
     // Hit enemy.
     g.fillStyle(0x666666, 1);
     g.lineStyle(1, 0xdddddd, 1.0);
     g.fillCircle(radius, radius, radius);
     g.strokeCircle(radius, radius, radius);
-    g.generateTexture(Enemy.nameHit, radius * 2, radius * 2);
+    g.generateTexture(Enemy.name + "-hit", radius * 2, radius * 2);
 
     g.destroy();
   }
@@ -32,112 +35,38 @@ export default class Enemy extends Phaser.Physics.Matter.Sprite {
     };
   }
 
-  private lives = 10;
-  private onDeath: (object: Phaser.Physics.Matter.Sprite) => void;
-
   constructor(
     world: Phaser.Physics.Matter.World,
-    x: number,
-    y: number,
+    width: number,
+    height: number,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
   ) {
     bodyOptions.shape = bodyOptions.shape || Enemy.getShape();
-    super(world, x, y, Enemy.nameIdle, null, bodyOptions);
+    super(world, 0, 0, Enemy.name, bodyOptions);
 
     this.setFrictionAir(0);
-
-    const angle = Phaser.Math.Between(0, 360);
-    const speed = Phaser.Math.FloatBetween(1, 3);
-
-    this.setAngle(angle);
-
-    this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
-
-    this.setVelocityX(speed * Math.cos(angle));
-    this.setVelocityY(speed * Math.sin(angle));
-
-    // Create animations.
-    this.anims.create({
-      key: Enemy.nameIdle,
-      frames: [{ key: Enemy.nameIdle }],
-    });
-
-    this.anims.create({
-      key: Enemy.nameHit,
-      frames: [{ key: Enemy.nameHit }],
-      frameRate: 20,
-      repeat: 0,
-    });
-
-    // Listen for animation complete event.
-    this.on(
-      Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + Enemy.nameHit,
-      () => {
-        this.handleLostLife();
-      }
-    );
-
-    this.play(Enemy.nameIdle, true);
+    this.reset(width, height);
   }
 
   reset(width: number, height: number) {
-    const angle = Phaser.Math.Between(0, 360);
-    const speed = Phaser.Math.FloatBetween(1, 3);
+    this.lives = 10;
 
     this.setPosition(
       Phaser.Math.Between(0, width),
       Phaser.Math.Between(0, height)
     );
+
+    const angle = Phaser.Math.Between(0, 360);
     this.setAngle(angle);
-
-    this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
-
+    const speed = Phaser.Math.FloatBetween(1, 3);
     this.setVelocityX(speed * Math.cos(angle));
     this.setVelocityY(speed * Math.sin(angle));
+    this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
 
     this.setActive(true);
     this.setVisible(true);
     this.world.add(this.body);
 
-    this.lives = 10;
-    this.play(Enemy.nameIdle, true);
-  }
-
-  preUpdate(time: number, delta: number) {
-    super.preUpdate(time, delta);
-  }
-
-  setOnDeath(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
-    this.onDeath = callback;
-  }
-
-  isPlaying(name: string) {
-    return this.anims.isPlaying && this.anims.getName() === name;
-  }
-
-  handleLostLife() {
-    this.lives--;
-
-    if (this.lives <= 0) {
-      this.handleDeath();
-    } else {
-      this.play(Enemy.nameIdle, true);
-    }
-  }
-
-  handleHit() {
-    if (!this.isPlaying(Enemy.nameHit)) {
-      this.play(Enemy.nameHit, true);
-    }
-  }
-
-  handleDeath() {
-    if (this.onDeath) {
-      this.onDeath(this);
-    }
-
-    this.setActive(false);
-    this.setVisible(false);
-    this.world.remove(this.body, true);
+    this.play(this.states.idle, true);
   }
 }

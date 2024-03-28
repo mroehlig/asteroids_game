@@ -116,7 +116,7 @@ export default class Game extends Phaser.Scene {
     }
 
     // Create the ship.
-    this.ship = new Ship(this, this.matter.world, width / 2, height / 2, {
+    this.ship = new Ship(this, this.matter.world, width, height, {
       collisionFilter: {
         category: this.shipCollisionCategory,
         mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
@@ -131,22 +131,17 @@ export default class Game extends Phaser.Scene {
     // Create the enemies.
     this.enemies = [];
     for (let i = 0; i < 1; i++) {
-      const enemy = new Enemy(
-        this.matter.world,
-        Phaser.Math.Between(0, width),
-        Phaser.Math.Between(0, height),
-        {
-          collisionFilter: {
-            category: this.enemiesCollisionCategory,
-            mask:
-              this.shipCollisionCategory |
-              this.bulletCollisionCategory |
-              this.asteroidsCollisionCategory |
-              this.enemiesCollisionCategory,
-          },
-          plugin: wrapBounds,
-        }
-      );
+      const enemy = new Enemy(this.matter.world, width, height, {
+        collisionFilter: {
+          category: this.enemiesCollisionCategory,
+          mask:
+            this.shipCollisionCategory |
+            this.bulletCollisionCategory |
+            this.asteroidsCollisionCategory |
+            this.enemiesCollisionCategory,
+        },
+        plugin: wrapBounds,
+      });
       enemy.setOnDeath(this.onEnemyDeath.bind(this));
       this.add.existing(enemy);
       this.enemies.push(enemy);
@@ -155,22 +150,17 @@ export default class Game extends Phaser.Scene {
     // Create the asteroids.
     this.asteroids = [];
     for (let i = 0; i < 4; i++) {
-      const asteroid = new Asteroid(
-        this.matter.world,
-        Phaser.Math.Between(0, width),
-        Phaser.Math.Between(0, height),
-        {
-          collisionFilter: {
-            category: this.asteroidsCollisionCategory,
-            mask:
-              this.shipCollisionCategory |
-              this.bulletCollisionCategory |
-              this.asteroidsCollisionCategory |
-              this.enemiesCollisionCategory,
-          },
-          plugin: wrapBounds,
-        }
-      );
+      const asteroid = new Asteroid(this.matter.world, width, height, {
+        collisionFilter: {
+          category: this.asteroidsCollisionCategory,
+          mask:
+            this.shipCollisionCategory |
+            this.bulletCollisionCategory |
+            this.asteroidsCollisionCategory |
+            this.enemiesCollisionCategory,
+        },
+        plugin: wrapBounds,
+      });
       asteroid.setOnDeath(this.onEnemyDeath.bind(this));
       this.add.existing(asteroid);
       this.asteroids.push(asteroid);

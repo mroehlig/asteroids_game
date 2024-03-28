@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 
-export default class Asteroid extends Phaser.Physics.Matter.Sprite {
-  private static readonly nameIdle = "asteroid-idle";
-  private static readonly nameHit = "asteroid-hit";
+import Entity from "./Entity";
+
+export default class Asteroid extends Entity {
+  private static readonly name = "asteroid";
   private static readonly width = 32;
   private static readonly height = 32;
 
@@ -17,14 +18,14 @@ export default class Asteroid extends Phaser.Physics.Matter.Sprite {
     g.lineStyle(1, 0x999999, 1.0);
     g.fillRect(0, 0, width, height);
     g.strokeRect(0, 0, width, height);
-    g.generateTexture(Asteroid.nameIdle, width, height);
+    g.generateTexture(Asteroid.name + "-idle", width, height);
 
     // Hit asteroid.
     g.fillStyle(0x666666, 1);
     g.lineStyle(1, 0xdddddd, 1.0);
     g.fillRect(0, 0, width, height);
     g.strokeRect(0, 0, width, height);
-    g.generateTexture(Asteroid.nameHit, width, height);
+    g.generateTexture(Asteroid.name + "-hit", width, height);
 
     g.destroy();
   }
@@ -37,107 +38,38 @@ export default class Asteroid extends Phaser.Physics.Matter.Sprite {
     };
   }
 
-  private lives = 4;
-  private onDeath: (object: Phaser.Physics.Matter.Sprite) => void;
-
   constructor(
     world: Phaser.Physics.Matter.World,
-    x: number,
-    y: number,
+    width: number,
+    height: number,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
   ) {
     bodyOptions.shape = bodyOptions.shape || Asteroid.getShape();
-    super(world, x, y, Asteroid.nameIdle, null, bodyOptions);
+    super(world, 0, 0, Asteroid.name, bodyOptions);
 
     this.setFrictionAir(0);
-
-    const angle = Phaser.Math.Between(0, 360);
-    const speed = Phaser.Math.FloatBetween(1, 3);
-
-    this.setAngle(angle);
-
-    this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
-
-    this.setVelocityX(speed * Math.cos(angle));
-    this.setVelocityY(speed * Math.sin(angle));
-
-    // Create animations.
-    this.anims.create({
-      key: Asteroid.nameIdle,
-      frames: [{ key: Asteroid.nameIdle }],
-    });
-
-    this.anims.create({
-      key: Asteroid.nameHit,
-      frames: [{ key: Asteroid.nameHit }],
-      frameRate: 20,
-      repeat: 0,
-    });
-
-    // Listen for animation complete event.
-    this.on(
-      Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + Asteroid.nameHit,
-      () => {
-        this.handleLostLife();
-      }
-    );
-
-    this.play(Asteroid.nameIdle, true);
+    this.reset(width, height);
   }
 
   reset(width: number, height: number) {
     this.lives = 4;
+
+    this.setPosition(
+      Phaser.Math.Between(0, width),
+      Phaser.Math.Between(0, height)
+    );
+
     const angle = Phaser.Math.Between(0, 360);
     const speed = Phaser.Math.FloatBetween(1, 3);
     this.setAngle(angle);
     this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
     this.setVelocityX(speed * Math.cos(angle));
     this.setVelocityY(speed * Math.sin(angle));
-    this.x = Phaser.Math.Between(0, width);
-    this.y = Phaser.Math.Between(0, height);
 
     this.setActive(true);
     this.setVisible(true);
     this.world.add(this.body);
 
-    this.play(Asteroid.nameIdle, true);
-  }
-
-  preUpdate(time: number, delta: number) {
-    super.preUpdate(time, delta);
-  }
-
-  setOnDeath(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
-    this.onDeath = callback;
-  }
-
-  isPlaying(name: string) {
-    return this.anims.isPlaying && this.anims.getName() === name;
-  }
-
-  handleLostLife() {
-    this.lives--;
-
-    if (this.lives <= 0) {
-      this.handleDeath();
-    } else {
-      this.play(Asteroid.nameIdle, true);
-    }
-  }
-
-  handleHit() {
-    if (!this.isPlaying(Asteroid.nameHit)) {
-      this.play(Asteroid.nameHit, true);
-    }
-  }
-
-  handleDeath() {
-    if (this.onDeath) {
-      this.onDeath(this);
-    }
-
-    this.setActive(false);
-    this.setVisible(false);
-    this.world.remove(this.body, true);
+    this.play(this.states.idle, true);
   }
 }

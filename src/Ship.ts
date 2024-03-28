@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+
+import Entity from "./Entity";
 import Bullet from "./Bullet";
 
 interface Input {
@@ -9,24 +11,11 @@ interface Input {
   shoot: boolean;
 }
 
-export default class Ship extends Phaser.Physics.Matter.Sprite {
-  private static readonly nameIdle = "ship-idle";
-  private static readonly nameHit = "ship-hit";
+export default class Ship extends Entity {
+  private static readonly name = "ship";
   private static readonly nameThrust = "ship-thrust";
   private static readonly width = 32;
   private static readonly height = 16;
-
-  private thrustEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
-  private thrustEmitTime = 0;
-
-  private lastInput: Input = {
-    left: false,
-    right: false,
-    forward: false,
-    backward: false,
-    shoot: false,
-  };
-  private fireTime = 0;
 
   static preload(scene: Phaser.Scene) {
     const width = Ship.width;
@@ -35,19 +24,29 @@ export default class Ship extends Phaser.Physics.Matter.Sprite {
 
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
 
+    // Create the ship shape.
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(width, height / 2);
+    g.lineTo(0, height);
+    g.lineTo(width / 4, height / 2);
+    g.closePath();
+    g.save();
+
     // Draw the ship idle.
     g.fillStyle(0x333333, 1);
     g.lineStyle(1, 0x999999, 1.0);
-    g.fillTriangle(0, 0, width, height / 2, 0, height);
-    g.strokeTriangle(0, 0, width, height / 2, 0, height);
-    g.generateTexture(Ship.nameIdle, width, height);
+    g.fillPath();
+    g.strokePath();
+    g.generateTexture(Ship.name + "-idle", width, height);
 
     // Draw the ship hit.
+    g.restore();
     g.fillStyle(0x666666, 1);
     g.lineStyle(1, 0xdddddd, 1.0);
-    g.fillTriangle(0, 0, width, height / 2, 0, height);
-    g.strokeTriangle(0, 0, width, height / 2, 0, height);
-    g.generateTexture(Ship.nameHit, width, height);
+    g.fillPath();
+    g.strokePath();
+    g.generateTexture(Ship.name + "-hit", width, height);
 
     // Draw the ship thrust.
     g.clear();
@@ -71,46 +70,27 @@ export default class Ship extends Phaser.Physics.Matter.Sprite {
     };
   }
 
-  public lives = 3;
-  private onHit: (object: Phaser.Physics.Matter.Sprite) => void;
-  private onDeath: (object: Phaser.Physics.Matter.Sprite) => void;
+  private thrustEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
+  private thrustEmitTime = 0;
+
+  private lastInput: Input = {
+    left: false,
+    right: false,
+    forward: false,
+    backward: false,
+    shoot: false,
+  };
+  private fireTime = 0;
 
   constructor(
     scene: Phaser.Scene,
     world: Phaser.Physics.Matter.World,
-    x: number,
-    y: number,
+    width: number,
+    height: number,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
   ) {
     bodyOptions.shape = bodyOptions.shape || Ship.getShape();
-    super(world, x, y, Ship.nameIdle, null, bodyOptions);
-
-    this.setFrictionAir(0.02);
-    this.setFixedRotation();
-    this.setAngle(-90);
-
-    // Create animations.
-    this.anims.create({
-      key: Ship.nameIdle,
-      frames: [{ key: Ship.nameIdle }],
-    });
-
-    this.anims.create({
-      key: Ship.nameHit,
-      frames: [{ key: Ship.nameHit }],
-      frameRate: 20,
-      repeat: 0,
-    });
-
-    // Listen for animation complete event.
-    this.on(
-      Phaser.Animations.Events.ANIMATION_COMPLETE_KEY + Ship.nameHit,
-      () => {
-        this.handleLostLife();
-      }
-    );
-
-    this.play(Ship.nameIdle, true);
+    super(world, 0, 0, Ship.name, bodyOptions);
 
     // Create the thrust emitter.
     this.thrustEmitter = scene.add.particles(0, 0, Ship.nameThrust, {
@@ -124,16 +104,24 @@ export default class Ship extends Phaser.Physics.Matter.Sprite {
       blendMode: "ADD",
       alpha: { min: 0.0, max: 1.0 },
     });
+
+    this.setFrictionAir(0.02);
+    this.setFixedRotation();
+    this.reset(width, height);
   }
 
   reset(width: number, height: number) {
+    this.lives = 3;
+
+    this.setPosition(width / 2, height / 2);
+    this.setAngle(-90);
+    this.setVelocity(0, 0);
+
     this.setActive(true);
     this.setVisible(true);
     this.world.add(this.body);
-    this.setVelocity(0, 0);
-    this.setPosition(width / 2, height / 2);
-    this.setAngle(-90);
-    this.lives = 3;
+
+    this.play(this.states.idle, true);
   }
 
   fire(bullets: Bullet[], time: number) {
@@ -153,10 +141,6 @@ export default class Ship extends Phaser.Physics.Matter.Sprite {
       this.rotation,
       5
     );
-  }
-
-  preUpdate(time: number, delta: number) {
-    super.preUpdate(time, delta);
   }
 
   getInput(
@@ -224,44 +208,5 @@ export default class Ship extends Phaser.Physics.Matter.Sprite {
         this.y - (Math.sin(this.rotation) * Ship.width) / 2
       );
     }
-  }
-
-  setOnHit(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
-    this.onHit = callback;
-  }
-
-  setOnDeath(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
-    this.onDeath = callback;
-  }
-
-  isPlaying(name: string) {
-    return this.anims.isPlaying && this.anims.getName() === name;
-  }
-
-  handleLostLife() {
-    this.lives--;
-    this.onHit(this);
-
-    if (this.lives <= 0) {
-      this.handleDeath();
-    } else {
-      this.play(Ship.nameIdle, true);
-    }
-  }
-
-  handleHit(_collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) {
-    if (!this.isPlaying(Ship.nameHit)) {
-      this.play(Ship.nameHit, true);
-    }
-  }
-
-  handleDeath() {
-    if (this.onDeath) {
-      this.onDeath(this);
-    }
-
-    this.setActive(false);
-    this.setVisible(false);
-    this.world.remove(this.body, true);
   }
 }
