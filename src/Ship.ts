@@ -183,18 +183,18 @@ export default class Ship extends Entity {
     this.lastInput = input.down;
 
     if (input.down.left) {
-      this.setAngularVelocity(-0.1);
+      this.setAngularVelocity(-0.05);
     } else if (input.down.right) {
-      this.setAngularVelocity(0.1);
+      this.setAngularVelocity(0.05);
     } else {
       this.setAngularVelocity(0);
     }
 
     const isThrusting = input.down.forward || input.down.backward;
     if (input.down.forward) {
-      this.thrust(0.0002);
+      this.thrust(0.0001);
     } else if (input.down.backward) {
-      this.thrust(-0.0002);
+      this.thrust(-0.0001);
     }
 
     if (input.down.shoot) {
