@@ -48,6 +48,7 @@ export default class Asteroid extends Entity {
     super(world, 0, 0, Asteroid.name, bodyOptions);
 
     this.setFrictionAir(0);
+    this.setOrigin(0.5, 0.5);
     this.reset(width, height);
   }
 

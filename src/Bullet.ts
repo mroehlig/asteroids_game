@@ -42,6 +42,7 @@ export default class Bullet extends Phaser.Physics.Matter.Sprite {
     this.setFrictionAir(0);
     this.setFixedRotation();
     this.setActive(false);
+    this.setOrigin(0.5, 0.5);
 
     this.world.remove(this.body, true);
   }

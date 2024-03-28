@@ -107,6 +107,8 @@ export default class Ship extends Entity {
 
     this.setFrictionAir(0.02);
     this.setFixedRotation();
+    this.setOrigin(0.5, 0.5);
+
     this.reset(width, height);
   }
 
