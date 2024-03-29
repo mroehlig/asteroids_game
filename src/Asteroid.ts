@@ -3,9 +3,9 @@ import Phaser from "phaser";
 import Entity from "./Entity";
 
 export default class Asteroid extends Entity {
-  private static readonly name = "asteroid";
-  private static readonly width = 32;
-  private static readonly height = 32;
+  public static readonly name = "asteroid";
+  public static readonly width = 32;
+  public static readonly height = 32;
 
   static preload(scene: Phaser.Scene) {
     const width = Asteroid.width;
@@ -40,25 +40,24 @@ export default class Asteroid extends Entity {
 
   constructor(
     world: Phaser.Physics.Matter.World,
-    width: number,
-    height: number,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
   ) {
     bodyOptions.shape = bodyOptions.shape || Asteroid.getShape();
     super(world, 0, 0, Asteroid.name, bodyOptions);
 
     this.setFrictionAir(0);
+    this.setBounce(0.5);
     this.setOrigin(0.5, 0.5);
-    this.reset(width, height);
   }
 
-  reset(width: number, height: number) {
+  spawn(width: number, height: number) {
     this.lives = 4;
+    this.score = 10;
 
-    this.setPosition(
-      Phaser.Math.Between(0, width),
-      Phaser.Math.Between(0, height)
-    );
+    // Spawn the asteroid outside the screen.
+    const x = Phaser.Math.Between(0, 1) ? -this.width : width + this.width;
+    const y = Phaser.Math.Between(0, 1) ? -this.height : height + this.height;
+    this.setPosition(x, y);
 
     const angle = Phaser.Math.Between(0, 360);
     const speed = Phaser.Math.FloatBetween(1, 3);

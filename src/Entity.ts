@@ -12,8 +12,9 @@ export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
   ]);
 
   public lives = 1;
-  protected onHit: (object: Phaser.Physics.Matter.Sprite) => void;
-  protected onDeath: (object: Phaser.Physics.Matter.Sprite) => void;
+  public score = 0;
+  protected onHit: (entity: Entity) => void;
+  protected onDeath: (entity: Entity) => void;
 
   constructor(
     world: Phaser.Physics.Matter.World,
@@ -47,17 +48,17 @@ export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
     );
   }
 
-  abstract reset(width: number, height: number): void;
+  abstract spawn(width: number, height: number): void;
 
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
   }
 
-  setOnHit(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
+  setOnHit(callback: (entity: Entity) => void) {
     this.onHit = callback;
   }
 
-  setOnDeath(callback: (object: Phaser.Physics.Matter.Sprite) => void) {
+  setOnDeath(callback: (entity: Entity) => void) {
     this.onDeath = callback;
   }
 
@@ -90,6 +91,10 @@ export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
       this.onDeath(this);
     }
 
+    this.despawn();
+  }
+
+  despawn() {
     this.setActive(false);
     this.setVisible(false);
     this.world.remove(this.body, true);

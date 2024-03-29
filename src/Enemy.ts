@@ -3,8 +3,8 @@ import Phaser from "phaser";
 import Entity from "./Entity";
 
 export default class Enemy extends Entity {
-  private static readonly name = "enemy";
-  private static readonly radius = 32;
+  public static readonly name = "enemy";
+  public static readonly radius = 32;
 
   static preload(scene: Phaser.Scene) {
     const radius = Enemy.radius;
@@ -37,25 +37,24 @@ export default class Enemy extends Entity {
 
   constructor(
     world: Phaser.Physics.Matter.World,
-    width: number,
-    height: number,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
   ) {
     bodyOptions.shape = bodyOptions.shape || Enemy.getShape();
     super(world, 0, 0, Enemy.name, bodyOptions);
 
     this.setFrictionAir(0);
+    this.setBounce(0.5);
     this.setOrigin(0.5, 0.5);
-    this.reset(width, height);
   }
 
-  reset(width: number, height: number) {
+  spawn(width: number, height: number) {
     this.lives = 10;
+    this.score = 100;
 
-    this.setPosition(
-      Phaser.Math.Between(0, width),
-      Phaser.Math.Between(0, height)
-    );
+    // Spawn the enemy outside the screen.
+    const x = Phaser.Math.Between(0, 1) ? -this.width : width + this.width;
+    const y = Phaser.Math.Between(0, 1) ? -this.height : height + this.height;
+    this.setPosition(x, y);
 
     const angle = Phaser.Math.Between(0, 360);
     this.setAngle(angle);
@@ -69,5 +68,26 @@ export default class Enemy extends Entity {
     this.world.add(this.body);
 
     this.play(this.states.get("idle").name, true);
+  }
+
+  update(...args: any[]): void {
+    super.update(...args);
+
+    // Randomly change direction.
+    if (Phaser.Math.Between(0, 100) < 1) {
+      const angle = Phaser.Math.Between(0, 360);
+      const speed = Phaser.Math.FloatBetween(1, 2);
+      this.setVelocityX(
+        Phaser.Math.Clamp(this.body.velocity.x + speed * Math.cos(angle), -3, 3)
+      );
+      this.setVelocityY(
+        Phaser.Math.Clamp(this.body.velocity.y + speed * Math.sin(angle), -3, 3)
+      );
+    }
+
+    // Randomly fire.
+    // if (Phaser.Math.Between(0, 100) < 1) {
+    //   this.fire();
+    // }
   }
 }

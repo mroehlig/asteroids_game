@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 
+import Title from "./Title";
 import Game from "./Game";
 
 export default new Phaser.Game({
@@ -32,5 +33,5 @@ export default new Phaser.Game({
   input: {
     gamepad: true,
   },
-  scene: [Game],
+  scene: [Title, Game],
 });
