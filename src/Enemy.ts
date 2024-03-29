@@ -6,7 +6,7 @@ import Ship from "./Ship";
 
 export default class Enemy extends Entity {
   public static readonly name = "enemy";
-  public static readonly radius = 32;
+  public static readonly radius = 24;
 
   static preload(scene: Phaser.Scene) {
     const radius = Enemy.radius;
@@ -37,6 +37,7 @@ export default class Enemy extends Entity {
     };
   }
 
+  protected maxSpeed = 1.5;
   protected fireTime = 0;
 
   constructor(
@@ -49,15 +50,6 @@ export default class Enemy extends Entity {
     this.setFrictionAir(0);
     this.setBounce(0.5);
     this.setOrigin(0.5, 0.5);
-
-    // Add scale tween.
-    this.scene.tweens.add({
-      targets: this,
-      scale: { from: 1, to: 0.75 },
-      duration: 250,
-      yoyo: true,
-      repeat: -1,
-    });
   }
 
   spawn(width: number, height: number) {
@@ -72,7 +64,7 @@ export default class Enemy extends Entity {
 
     const angle = Phaser.Math.Between(0, 360);
     this.setAngle(angle);
-    const speed = Phaser.Math.FloatBetween(1, 2);
+    const speed = Phaser.Math.FloatBetween(1, this.maxSpeed);
     this.setVelocityX(speed * Math.cos(angle));
     this.setVelocityY(speed * Math.sin(angle));
     this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
@@ -88,17 +80,25 @@ export default class Enemy extends Entity {
     // Randomly change direction.
     if (Phaser.Math.Between(0, 100) < 1) {
       const angle = Phaser.Math.Between(0, 360);
-      const speed = Phaser.Math.FloatBetween(1, 2);
+      const speed = Phaser.Math.FloatBetween(1, this.maxSpeed);
       this.setVelocityX(
-        Phaser.Math.Clamp(this.body.velocity.x + speed * Math.cos(angle), -2, 2)
+        Phaser.Math.Clamp(
+          this.body.velocity.x + speed * Math.cos(angle),
+          -this.maxSpeed,
+          this.maxSpeed
+        )
       );
       this.setVelocityY(
-        Phaser.Math.Clamp(this.body.velocity.y + speed * Math.sin(angle), -2, 2)
+        Phaser.Math.Clamp(
+          this.body.velocity.y + speed * Math.sin(angle),
+          -this.maxSpeed,
+          this.maxSpeed
+        )
       );
     }
 
     // Randomly fire.
-    if (Phaser.Math.Between(0, 100) < 1) {
+    if (ship.active && Phaser.Math.Between(0, 100) < 1) {
       this.fire(ship, bullets, time);
     }
   }
@@ -125,9 +125,24 @@ export default class Enemy extends Entity {
       return;
     }
 
-    // Fire the bullet in the direction of the ship.
-    const angle = Phaser.Math.Angle.Between(this.x, this.y, ship.x, ship.y);
-    bullet.fire(this.x, this.y, angle, 5);
-    this.fireTime = time;
+    // Play the fire animation.
+    this.scene.tweens.add({
+      targets: this,
+      scale: { from: 1, to: 1.25 },
+      duration: 150,
+      yoyo: true,
+      onComplete: () => {
+        // Fire the bullet in the direction of the ship.
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, ship.x, ship.y);
+        // Offset bullet spawn position to the front of the enemy.
+        bullet.fire(
+          this.x + (Math.cos(angle) * Enemy.radius) / 2,
+          this.y + (Math.sin(angle) * Enemy.radius) / 2,
+          angle,
+          4
+        );
+        this.fireTime = time;
+      },
+    });
   }
 }
