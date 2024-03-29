@@ -10,6 +10,7 @@ export default class Game extends Phaser.Scene {
   private ship: Ship;
   private bullets: Bullet[] = [];
   private enemies: Enemy[] = [];
+  private enemyBullets: Bullet[] = [];
   private enemiesTimer: number = 0;
   private asteroids: Asteroid[] = [];
   private asteroidTimer: number = 0;
@@ -20,6 +21,7 @@ export default class Game extends Phaser.Scene {
   private shipCollisionCategory: number;
   private bulletCollisionCategory: number;
   private enemiesCollisionCategory: number;
+  private enemyBulletCollisionCategory: number;
   private asteroidsCollisionCategory: number;
 
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -50,33 +52,52 @@ export default class Game extends Phaser.Scene {
     };
 
     // Create the collision categories.
-    this.enemiesCollisionCategory = this.matter.world.nextCategory();
     this.shipCollisionCategory = this.matter.world.nextCategory();
     this.bulletCollisionCategory = this.matter.world.nextCategory();
+    this.enemiesCollisionCategory = this.matter.world.nextCategory();
+    this.enemyBulletCollisionCategory = this.matter.world.nextCategory();
     this.asteroidsCollisionCategory = this.matter.world.nextCategory();
 
     // Create the bullets.
     for (let i = 0; i < 64; i++) {
-      const bullet = new Bullet(this.matter.world, 0, 0, {
+      const bullet = new Bullet(this.matter.world, {
         collisionFilter: {
           category: this.bulletCollisionCategory,
           mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
         },
         plugin: wrapBounds,
       });
-      bullet.setOnCollide(
-        (collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) =>
-          this.hitBullet(collisionData)
-      );
+      bullet.setOnCollide(this.hitBullet.bind(this));
       this.add.existing(bullet);
       this.bullets.push(bullet);
+    }
+
+    // Create the enemy bullets.
+    for (let i = 0; i < 5; i++) {
+      const bullet = new Bullet(
+        this.matter.world,
+        {
+          collisionFilter: {
+            category: this.enemyBulletCollisionCategory,
+            mask: this.shipCollisionCategory,
+          },
+          plugin: wrapBounds,
+        },
+        2000
+      );
+      bullet.setOnCollide(this.hitBullet.bind(this));
+      this.add.existing(bullet);
+      this.enemyBullets.push(bullet);
     }
 
     // Create the ship.
     this.ship = new Ship(this, this.matter.world, {
       collisionFilter: {
         category: this.shipCollisionCategory,
-        mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
+        mask:
+          this.enemiesCollisionCategory |
+          this.enemyBulletCollisionCategory |
+          this.asteroidsCollisionCategory,
       },
       plugin: wrapBounds,
     });
@@ -280,13 +301,13 @@ export default class Game extends Phaser.Scene {
 
   hitBullet(collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) {
     const bullet = collisionData.bodyA.gameObject;
-    const enemy = collisionData.bodyB.gameObject;
+    const entity = collisionData.bodyB.gameObject;
 
     bullet.setActive(false);
     bullet.setVisible(false);
     bullet.world.remove(bullet.body, true);
 
-    enemy.handleHit();
+    entity.handleHit();
   }
 
   onEnemyDeath(entity: Entity) {
@@ -322,13 +343,13 @@ export default class Game extends Phaser.Scene {
 
   update(time: number) {
     // Spawn asteroid.
-    if (time > this.asteroidTimer + 5000) {
-      this.asteroidTimer = time;
-      this.spawnAsteroid();
-    }
+    // if (time > this.asteroidTimer + 5000) {
+    //   this.asteroidTimer = time;
+    //   this.spawnAsteroid();
+    // }
 
     // Spawn enemy.
-    if (time > this.enemiesTimer + 30000) {
+    if (time > this.enemiesTimer + 3000) {
       this.enemiesTimer = time;
       this.spawnEnemy();
     }
@@ -337,6 +358,6 @@ export default class Game extends Phaser.Scene {
     this.ship.update(this, this.cursors, this.keys, this.bullets, time);
 
     // Update enemies.
-    this.enemies.forEach((e) => e.update(time));
+    this.enemies.forEach((e) => e.update(this.ship, this.enemyBullets, time));
   }
 }

@@ -28,16 +28,18 @@ export default class Bullet extends Phaser.Physics.Matter.Sprite {
     };
   }
 
-  private lifespan: number = 0;
+  private lifespan: number = 1000;
+  private lifeTimer: number = 0;
 
   constructor(
     world: Phaser.Physics.Matter.World,
-    x: number,
-    y: number,
-    bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
+    bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig,
+    lifespan: number = 1000
   ) {
     bodyOptions.shape = bodyOptions.shape || Bullet.getShape();
-    super(world, x, y, Bullet.nameIdle, null, bodyOptions);
+    super(world, 0, 0, Bullet.nameIdle, null, bodyOptions);
+
+    this.lifespan = lifespan;
 
     this.setFrictionAir(0);
     this.setFixedRotation();
@@ -58,15 +60,15 @@ export default class Bullet extends Phaser.Physics.Matter.Sprite {
     this.setVelocityX(speed * Math.cos(angle));
     this.setVelocityY(speed * Math.sin(angle));
 
-    this.lifespan = 1000;
+    this.lifeTimer = this.lifespan;
   }
 
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
 
-    this.lifespan -= delta;
+    this.lifeTimer -= delta;
 
-    if (this.lifespan <= 0) {
+    if (this.lifeTimer <= 0) {
       this.setActive(false);
       this.setVisible(false);
       this.world.remove(this.body, true);

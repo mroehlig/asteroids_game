@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 
 import Entity from "./Entity";
+import Bullet from "./Bullet";
+import Ship from "./Ship";
 
 export default class Enemy extends Entity {
   public static readonly name = "enemy";
@@ -35,6 +37,8 @@ export default class Enemy extends Entity {
     };
   }
 
+  protected fireTime = 0;
+
   constructor(
     world: Phaser.Physics.Matter.World,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig
@@ -50,6 +54,7 @@ export default class Enemy extends Entity {
   spawn(width: number, height: number) {
     this.lives = 10;
     this.score = 100;
+    this.fireTime = 0;
 
     // Spawn the enemy outside the screen.
     const x = Phaser.Math.Between(0, 1) ? -this.width : width + this.width;
@@ -58,7 +63,7 @@ export default class Enemy extends Entity {
 
     const angle = Phaser.Math.Between(0, 360);
     this.setAngle(angle);
-    const speed = Phaser.Math.FloatBetween(1, 3);
+    const speed = Phaser.Math.FloatBetween(1, 2);
     this.setVelocityX(speed * Math.cos(angle));
     this.setVelocityY(speed * Math.sin(angle));
     this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
@@ -70,24 +75,50 @@ export default class Enemy extends Entity {
     this.play(this.states.get("idle").name, true);
   }
 
-  update(...args: any[]): void {
-    super.update(...args);
-
+  update(ship: Ship, bullets: Bullet[], time: number): void {
     // Randomly change direction.
     if (Phaser.Math.Between(0, 100) < 1) {
       const angle = Phaser.Math.Between(0, 360);
       const speed = Phaser.Math.FloatBetween(1, 2);
       this.setVelocityX(
-        Phaser.Math.Clamp(this.body.velocity.x + speed * Math.cos(angle), -3, 3)
+        Phaser.Math.Clamp(this.body.velocity.x + speed * Math.cos(angle), -2, 2)
       );
       this.setVelocityY(
-        Phaser.Math.Clamp(this.body.velocity.y + speed * Math.sin(angle), -3, 3)
+        Phaser.Math.Clamp(this.body.velocity.y + speed * Math.sin(angle), -2, 2)
       );
     }
 
     // Randomly fire.
-    // if (Phaser.Math.Between(0, 100) < 1) {
-    //   this.fire();
-    // }
+    if (Phaser.Math.Between(0, 100) < 1) {
+      this.fire(ship, bullets, time);
+    }
+  }
+
+  fire(ship: Ship, bullets: Bullet[], time: number) {
+    if (time < this.fireTime + 1000) {
+      return;
+    }
+
+    // Check if the ship is close enough.
+    const distance = Phaser.Math.Distance.Between(
+      this.x,
+      this.y,
+      ship.x,
+      ship.y
+    );
+    if (distance > 500) {
+      return;
+    }
+
+    // Find an inactive bullet.
+    const bullet = bullets.find((b) => !b.active);
+    if (!bullet) {
+      return;
+    }
+
+    // Fire the bullet in the direction of the ship.
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, ship.x, ship.y);
+    bullet.fire(this.x, this.y, angle, 5);
+    this.fireTime = time;
   }
 }
