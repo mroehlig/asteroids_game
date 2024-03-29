@@ -45,6 +45,15 @@ export default class Enemy extends Entity {
     this.setFrictionAir(0);
     this.setBounce(0.5);
     this.setOrigin(0.5, 0.5);
+
+    // Add scale tween.
+    this.scene.tweens.add({
+      targets: this,
+      scale: { from: 1, to: 0.75 },
+      duration: 250,
+      yoyo: true,
+      repeat: -1,
+    });
   }
 
   spawn(width: number, height: number) {
