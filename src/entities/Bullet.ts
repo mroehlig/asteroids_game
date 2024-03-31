@@ -1,44 +1,58 @@
 import Phaser from "phaser";
 
+interface BulletType {
+  name: string;
+  width: number;
+  height: number;
+}
+
 export default class Bullet extends Phaser.Physics.Matter.Sprite {
-  private static readonly nameIdle = "bullet";
-  private static readonly width = 8;
-  private static readonly height = 4;
+  public static readonly types = {
+    small: { name: "bullet-small", width: 8, height: 4 },
+    long: { name: "bullet-long", width: 16, height: 8 },
+    bomb: { name: "bullet-bomb", width: 8, height: 8 },
+  };
 
   static preload(scene: Phaser.Scene) {
-    const width = Bullet.width;
-    const height = Bullet.height;
-
     const g = scene.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(0x333333, 1);
-    g.lineStyle(1, 0x999999, 1.0);
 
-    g.fillRoundedRect(0, 0, width, height, height / 2);
-    g.strokeRoundedRect(0, 0, width, height, height / 2);
+    for (const type of Object.values(Bullet.types)) {
+      g.clear();
+      g.fillStyle(0x333333, 1);
+      g.lineStyle(1, 0x999999, 1.0);
 
-    g.generateTexture(Bullet.nameIdle, width, height);
+      g.fillRoundedRect(0, 0, type.width, type.height, type.height / 2);
+      g.strokeRoundedRect(0, 0, type.width, type.height, type.height / 2);
+
+      g.generateTexture(type.name, type.width, type.height);
+    }
+
     g.destroy();
   }
 
-  static getShape() {
+  static getShape(type: BulletType) {
     return {
       type: "rectangle",
-      width: Bullet.width,
-      height: Bullet.height,
+      width: type.width,
+      height: type.height,
     };
   }
 
+  public damage = 1;
   private lifespan: number = 1000;
   private lifeTimer: number = 0;
 
   constructor(
     world: Phaser.Physics.Matter.World,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig,
+    type: BulletType,
+    damage: number = 1,
     lifespan: number = 1000
   ) {
-    bodyOptions.shape = bodyOptions.shape || Bullet.getShape();
-    super(world, 0, 0, Bullet.nameIdle, null, bodyOptions);
+    bodyOptions.shape = bodyOptions.shape || Bullet.getShape(type);
+    super(world, 0, 0, type.name, null, bodyOptions);
 
+    this.damage = damage;
     this.lifespan = lifespan;
 
     this.setFrictionAir(0);

@@ -1,9 +1,9 @@
 import Phaser from "phaser";
 
-import Ship from "./Ship";
-import Bullet from "./Bullet";
-import Enemy from "./Enemy";
-import Asteroid from "./Asteroid";
+import Ship from "../entities/Ship";
+import Bullet from "../entities/Bullet";
+import Enemy from "../entities/Enemy";
+import Asteroid from "../entities/Asteroid";
 
 export default class Title extends Phaser.Scene {
   private titleText: Phaser.GameObjects.Text;
@@ -169,6 +169,6 @@ export default class Title extends Phaser.Scene {
   }
 
   startGame() {
-    this.scene.start("game");
+    this.scene.start("game").launch("hud");
   }
 }

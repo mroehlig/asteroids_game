@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 
-import Title from "./Title";
-import Game from "./Game";
+import Title from "./scenes/Title";
+import Game from "./scenes/Game";
+import Hud from "./scenes/Hud";
 
 export default new Phaser.Game({
   type: Phaser.AUTO,
@@ -33,5 +34,5 @@ export default new Phaser.Game({
   input: {
     gamepad: true,
   },
-  scene: [Title, Game],
+  scene: [Title, Game, Hud],
 });

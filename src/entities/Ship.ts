@@ -2,16 +2,7 @@ import Phaser from "phaser";
 
 import Entity from "./Entity";
 import Bullet from "./Bullet";
-
-interface Input {
-  left: boolean;
-  right: boolean;
-  forward: boolean;
-  backward: boolean;
-  shoot: boolean;
-  boost: boolean;
-  bomb: boolean;
-}
+import Input from "../Input";
 
 export default class Ship extends Entity {
   public static readonly name = "ship";
@@ -74,16 +65,6 @@ export default class Ship extends Entity {
 
   private thrustEmitter: Phaser.GameObjects.Particles.ParticleEmitter;
   private thrustEmitTime = 0;
-
-  private lastInput: Input = {
-    left: false,
-    right: false,
-    forward: false,
-    backward: false,
-    shoot: false,
-    boost: false,
-    bomb: false,
-  };
   private fireTime = 0;
 
   constructor(
@@ -116,20 +97,18 @@ export default class Ship extends Entity {
   }
 
   spawn(width: number, height: number) {
+    super.spawn(width, height);
+
     this.lives = 3;
 
     this.setPosition(width / 2, height / 2);
     this.setAngle(-90);
     this.setVelocity(0, 0);
 
-    this.setActive(true);
-    this.setVisible(true);
-    this.world.add(this.body);
-
     this.play(this.states.get("idle").name, true);
   }
 
-  fire(bullets: Bullet[], time: number) {
+  fire(time: number, bullets: Bullet[], speed: number) {
     if (time < this.fireTime + 100) {
       return;
     }
@@ -144,54 +123,19 @@ export default class Ship extends Entity {
       this.x + (Math.cos(this.rotation) * Ship.width) / 2,
       this.y + (Math.sin(this.rotation) * Ship.width) / 2,
       this.rotation,
-      5
+      speed
     );
   }
 
-  getInput(
-    scene: Phaser.Scene,
-    cursors: Phaser.Types.Input.Keyboard.CursorKeys,
-    keys: any,
-    lastInput: Input
-  ) {
-    const gamepad = scene.input.gamepad.getPad(0);
-
-    const inputs = {
-      left: cursors.left.isDown || keys.left.isDown || gamepad?.left,
-      right: cursors.right.isDown || keys.right.isDown || gamepad?.right,
-      forward: cursors.up.isDown || keys.forward.isDown || gamepad?.up,
-      backward: cursors.down.isDown || keys.backward.isDown || gamepad?.down,
-      shoot: cursors.space.isDown || keys.shoot.isDown || gamepad?.A,
-      boost: keys.boost.isDown || gamepad?.L1,
-      bomb: keys.bomb.isDown || gamepad?.X,
-    };
-
-    const justInputs = {
-      left: inputs.left && !lastInput.left,
-      right: inputs.right && !lastInput.right,
-      forward: inputs.forward && !lastInput.forward,
-      backward: inputs.backward && !lastInput.backward,
-      shoot: inputs.shoot && !lastInput.shoot,
-      boost: inputs.boost && !lastInput.boost,
-      bomb: inputs.bomb && !lastInput.bomb,
-    };
-
-    return { down: inputs, just: justInputs };
-  }
-
   update(
-    scene: Phaser.Scene,
-    cursors: Phaser.Types.Input.Keyboard.CursorKeys,
-    keys: object,
+    time: number,
+    input: { down: Input; just: Input | null },
     bullets: Bullet[],
-    time: number
+    bombs: Bullet[]
   ) {
-    if (this.lives <= 0 || !this.active) {
+    if (this.dead || this.lives <= 0 || !this.active) {
       return;
     }
-
-    const input = this.getInput(scene, cursors, keys, this.lastInput);
-    this.lastInput = input.down;
 
     if (input.down.left) {
       this.setAngularVelocity(-0.05);
@@ -209,7 +153,9 @@ export default class Ship extends Entity {
     }
 
     if (input.down.shoot) {
-      this.fire(bullets, time);
+      this.fire(time, bullets, 5);
+    } else if (input.just.bomb) {
+      this.fire(time, bombs, 2);
     }
 
     if (isThrusting && time > this.thrustEmitTime + 100) {

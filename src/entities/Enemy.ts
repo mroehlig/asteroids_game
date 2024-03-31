@@ -53,9 +53,11 @@ export default class Enemy extends Entity {
   }
 
   spawn(width: number, height: number) {
+    super.spawn(width, height);
+
     this.lives = 10;
     this.score = 100;
-    this.fireTime = 0;
+    this.fireTime = this.scene.game.getTime();
 
     // Spawn the enemy outside the screen.
     const x = Phaser.Math.Between(0, 1) ? -this.width : width + this.width;
@@ -69,14 +71,14 @@ export default class Enemy extends Entity {
     this.setVelocityY(speed * Math.sin(angle));
     this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
 
-    this.setActive(true);
-    this.setVisible(true);
-    this.world.add(this.body);
-
     this.play(this.states.get("idle").name, true);
   }
 
-  update(ship: Ship, bullets: Bullet[], time: number): void {
+  update(time: number, ship: Ship, bullets: Bullet[]): void {
+    if (this.dead || !this.active || !this.visible) {
+      return;
+    }
+
     // Randomly change direction.
     if (Phaser.Math.Between(0, 100) < 1) {
       const angle = Phaser.Math.Between(0, 360);
@@ -103,7 +105,7 @@ export default class Enemy extends Entity {
     }
   }
 
-  fire(ship: Ship, bullets: Bullet[], time: number) {
+  protected fire(ship: Ship, bullets: Bullet[], time: number) {
     if (time < this.fireTime + 1000) {
       return;
     }
@@ -115,7 +117,9 @@ export default class Enemy extends Entity {
       ship.x,
       ship.y
     );
-    if (distance > 500) {
+
+    const { width, height } = this.scene.game.canvas;
+    if (distance > Math.min(width, height) / 2) {
       return;
     }
 
@@ -139,7 +143,7 @@ export default class Enemy extends Entity {
           this.x + (Math.cos(angle) * Enemy.radius) / 2,
           this.y + (Math.sin(angle) * Enemy.radius) / 2,
           angle,
-          4
+          3
         );
         this.fireTime = time;
       },

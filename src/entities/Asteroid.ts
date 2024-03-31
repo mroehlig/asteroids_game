@@ -51,6 +51,8 @@ export default class Asteroid extends Entity {
   }
 
   spawn(width: number, height: number) {
+    super.spawn(width, height);
+
     this.lives = 4;
     this.score = 10;
 
@@ -65,11 +67,5 @@ export default class Asteroid extends Entity {
     this.setAngularVelocity(Phaser.Math.FloatBetween(-0.05, 0.05));
     this.setVelocityX(speed * Math.cos(angle));
     this.setVelocityY(speed * Math.sin(angle));
-
-    this.setActive(true);
-    this.setVisible(true);
-    this.world.add(this.body);
-
-    this.play(this.states.get("idle").name, true);
   }
 }

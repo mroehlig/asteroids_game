@@ -1,14 +1,17 @@
 import Phaser from "phaser";
 
-import Entity from "./Entity";
-import Ship from "./Ship";
-import Bullet from "./Bullet";
-import Enemy from "./Enemy";
-import Asteroid from "./Asteroid";
+import Hud from "./Hud";
+import Entity from "../entities/Entity";
+import Ship from "../entities/Ship";
+import Bullet from "../entities/Bullet";
+import Enemy from "../entities/Enemy";
+import Asteroid from "../entities/Asteroid";
+import Input from "../Input";
 
 export default class Game extends Phaser.Scene {
-  private ship: Ship;
+  public ship: Ship;
   private bullets: Bullet[] = [];
+  private bombs: Bullet[] = [];
   private enemies: Enemy[] = [];
   private enemyBullets: Bullet[] = [];
   private enemiesTimer: number = 0;
@@ -24,16 +27,20 @@ export default class Game extends Phaser.Scene {
   private enemyBulletCollisionCategory: number;
   private asteroidsCollisionCategory: number;
 
-  private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-  private keys: object;
+  public cursors: Phaser.Types.Input.Keyboard.CursorKeys;
+  public keys: any;
+  private lastInput: Input = {
+    left: false,
+    right: false,
+    forward: false,
+    backward: false,
+    shoot: false,
+    boost: false,
+    bomb: false,
+  };
 
-  private livesText: Phaser.GameObjects.Text;
-  private scoreText: Phaser.GameObjects.Text;
-  private score: number = 0;
-
-  private gameOverText: Phaser.GameObjects.Text;
-  private restartText: Phaser.GameObjects.Text;
-  private restartTextTween: Phaser.Tweens.Tween;
+  public score: number = 0;
+  private paused: boolean = false;
 
   constructor() {
     super("game");
@@ -60,16 +67,42 @@ export default class Game extends Phaser.Scene {
 
     // Create the bullets.
     for (let i = 0; i < 64; i++) {
-      const bullet = new Bullet(this.matter.world, {
-        collisionFilter: {
-          category: this.bulletCollisionCategory,
-          mask: this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
+      const bullet = new Bullet(
+        this.matter.world,
+        {
+          collisionFilter: {
+            category: this.bulletCollisionCategory,
+            mask:
+              this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
+          },
+          plugin: wrapBounds,
         },
-        plugin: wrapBounds,
-      });
+        Bullet.types.small
+      );
       bullet.setOnCollide(this.hitBullet.bind(this));
       this.add.existing(bullet);
       this.bullets.push(bullet);
+    }
+
+    // Create the bombs.
+    for (let i = 0; i < 1; i++) {
+      const bullet = new Bullet(
+        this.matter.world,
+        {
+          collisionFilter: {
+            category: this.bulletCollisionCategory,
+            mask:
+              this.enemiesCollisionCategory | this.asteroidsCollisionCategory,
+          },
+          plugin: wrapBounds,
+        },
+        Bullet.types.bomb,
+        5,
+        5000
+      );
+      bullet.setOnCollide(this.hitBullet.bind(this));
+      this.add.existing(bullet);
+      this.bombs.push(bullet);
     }
 
     // Create the enemy bullets.
@@ -83,6 +116,8 @@ export default class Game extends Phaser.Scene {
           },
           plugin: wrapBounds,
         },
+        Bullet.types.long,
+        1,
         2000
       );
       bullet.setOnCollide(this.hitBullet.bind(this));
@@ -101,7 +136,7 @@ export default class Game extends Phaser.Scene {
       },
       plugin: wrapBounds,
     });
-    this.ship.setOnCollide(this.ship.handleHit.bind(this.ship));
+    this.ship.setOnCollide(() => this.ship.handleHit());
     this.ship.setOnHit(this.onShipHit.bind(this));
     this.ship.setOnDeath(this.onShipDeath.bind(this));
     this.ship.spawn(width, height);
@@ -146,71 +181,10 @@ export default class Game extends Phaser.Scene {
         shoot: Phaser.Input.Keyboard.KeyCodes.SPACE,
         bomb: Phaser.Input.Keyboard.KeyCodes.B,
         boost: Phaser.Input.Keyboard.KeyCodes.SHIFT,
-        pause: Phaser.Input.Keyboard.KeyCodes.P,
-        mute: Phaser.Input.Keyboard.KeyCodes.M,
       },
       true,
       true
     );
-
-    this.input.keyboard.on("keydown-R", () => {
-      this.restart();
-    });
-
-    this.input.keyboard.on("keydown-SPACE", () => {
-      if (this.restartText.visible) {
-        this.restart();
-      }
-    });
-
-    // Create the lives text.
-    this.livesText = this.add.text(16, 16, "Lives: " + this.ship.lives, {
-      fontSize: "12px monospace",
-      color: "#dddddd",
-    });
-    this.livesText.setDepth(1);
-
-    // Create the score text.
-    this.scoreText = this.add.text(width - 120, 16, "Score: 0", {
-      font: "12px monospace",
-      color: "#dddddd",
-    });
-    this.scoreText.setDepth(1);
-
-    // Create the game over text.
-    this.gameOverText = this.add.text(width / 2, height / 2, "Game Over", {
-      font: "32px monospace",
-      color: "#dddddd",
-    });
-    this.gameOverText.setDepth(1);
-    this.gameOverText.setOrigin(0.5, 0.5);
-    this.gameOverText.setVisible(false);
-
-    // Create the restart text.
-    this.restartText = this.add.text(
-      width / 2,
-      height / 2 + 32,
-      "- Press shoot to restart -",
-      {
-        font: "16px monospace",
-        color: "#dddddd",
-      }
-    );
-    this.restartText.setDepth(1);
-    this.restartText.setOrigin(0.5, 0.5);
-    this.restartText.setVisible(false);
-
-    this.restartTextTween = this.tweens.add({
-      targets: this.restartText,
-      alpha: { from: 0.5, to: 1 },
-      duration: 1000,
-      ease: "Sine.easeInOut",
-      yoyo: true,
-      repeat: -1,
-      delay: 1000,
-      persist: true,
-      paused: true,
-    });
   }
 
   spawnAsteroid() {
@@ -280,9 +254,6 @@ export default class Game extends Phaser.Scene {
   }
 
   restart() {
-    this.gameOverText.setVisible(false);
-    this.restartText.setVisible(false);
-    this.restartTextTween.pause();
     this.score = 0;
 
     // Despawn enemies and asteroids.
@@ -290,13 +261,12 @@ export default class Game extends Phaser.Scene {
     this.enemies.forEach((e) => e.despawn());
     this.asteroids.forEach((a) => a.despawn());
 
-    // Respawn ship and first asteroid.
+    // Respawn ship.
     this.ship.spawn(width, height);
-    this.asteroids[0].spawn(width, height);
 
-    // Update score and lives.
-    this.scoreText.setText("Score: " + this.score);
-    this.livesText.setText("Lives: " + this.ship.lives);
+    // Reset timers.
+    this.enemiesTimer = this.game.getTime();
+    this.asteroidTimer = this.game.getTime();
   }
 
   hitBullet(collisionData: Phaser.Types.Physics.Matter.MatterCollisionData) {
@@ -307,7 +277,7 @@ export default class Game extends Phaser.Scene {
     bullet.setVisible(false);
     bullet.world.remove(bullet.body, true);
 
-    entity.handleHit();
+    entity.handleHit(bullet?.damage || 1);
   }
 
   onEnemyDeath(entity: Entity) {
@@ -316,32 +286,68 @@ export default class Game extends Phaser.Scene {
 
     // Update score.
     this.score += entity.score;
-    this.scoreText.setText("Score: " + this.score);
+    (this.scene.get("hud") as Hud).setScore(this.score);
   }
 
   onShipHit() {
-    this.livesText.setText("Lives: " + this.ship.lives);
+    (this.scene.get("hud") as Hud).setLives(this.ship.lives);
   }
 
   onShipDeath(object: Phaser.Physics.Matter.Sprite) {
     // Emit explosion.
     this.explosionEmitter.explode(16, object.x, object.y);
 
-    // Update game over text.
-    this.gameOverText.setVisible(true);
-    this.tweens.add({
-      targets: this.gameOverText,
-      alpha: { from: 0, to: 1 },
-      duration: 1000,
-      ease: "Sine.easeInOut",
-    });
+    const hud = this.scene.get("hud") as Hud;
+    hud.gameOver();
+  }
 
-    // Update restart text.
-    this.restartText.setVisible(true);
-    this.restartTextTween.restart();
+  getInput(
+    gamepad: Phaser.Input.Gamepad.Gamepad,
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys,
+    keys: any,
+    lastInput: Input = null
+  ) {
+    const inputs = {
+      left: cursors.left.isDown || keys.left.isDown || gamepad?.left,
+      right: cursors.right.isDown || keys.right.isDown || gamepad?.right,
+      forward: cursors.up.isDown || keys.forward.isDown || gamepad?.up,
+      backward: cursors.down.isDown || keys.backward.isDown || gamepad?.down,
+      shoot: cursors.space.isDown || keys.shoot.isDown || gamepad?.A,
+      boost: keys.boost.isDown || gamepad?.L1,
+      bomb: keys.bomb.isDown || gamepad?.X,
+    };
+
+    let justInputs = null;
+    if (lastInput) {
+      justInputs = {
+        left: inputs.left && !lastInput.left,
+        right: inputs.right && !lastInput.right,
+        forward: inputs.forward && !lastInput.forward,
+        backward: inputs.backward && !lastInput.backward,
+        shoot: inputs.shoot && !lastInput.shoot,
+        boost: inputs.boost && !lastInput.boost,
+        bomb: inputs.bomb && !lastInput.bomb,
+      };
+    }
+
+    return { down: inputs, just: justInputs };
   }
 
   update(time: number) {
+    if (this.paused) {
+      return;
+    }
+
+    // Get input.
+    const gamepad = this.input.gamepad.getPad(0);
+    const input = this.getInput(
+      gamepad,
+      this.cursors,
+      this.keys,
+      this.lastInput
+    );
+    this.lastInput = input.down;
+
     // Spawn asteroid.
     // if (time > this.asteroidTimer + 5000) {
     //   this.asteroidTimer = time;
@@ -349,15 +355,19 @@ export default class Game extends Phaser.Scene {
     // }
 
     // Spawn enemy.
-    if (time > this.enemiesTimer + 3000) {
+    if (time > this.enemiesTimer + 8000) {
       this.enemiesTimer = time;
       this.spawnEnemy();
     }
 
     // Update ship.
-    this.ship.update(this, this.cursors, this.keys, this.bullets, time);
+    this.ship.update(time, input, this.bullets, this.bombs);
 
     // Update enemies.
-    this.enemies.forEach((e) => e.update(this.ship, this.enemyBullets, time));
+    this.enemies.forEach((e) => {
+      if (e.active) {
+        e.update(time, this.ship, this.enemyBullets);
+      }
+    });
   }
 }
