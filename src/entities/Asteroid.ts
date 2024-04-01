@@ -15,6 +15,14 @@ interface AsteroidConfig {
   angularVelocity: number;
 }
 
+export const AsteroidTypes: AsteroidType[] = [
+  "xxlarge",
+  "xlarge",
+  "large",
+  "medium",
+  "small",
+];
+
 export default class Asteroid extends Entity {
   public static readonly configs = {
     xxlarge: {
@@ -119,15 +127,28 @@ export default class Asteroid extends Entity {
     this.setOrigin(0.5, 0.5);
   }
 
+  spawnFrom(parent: Asteroid) {
+    // Spawn the asteroid at parent's position with offset.
+    const x = parent.x + Phaser.Math.Between(-parent.width, parent.width);
+    const y = parent.y + Phaser.Math.Between(-parent.height, parent.height);
+
+    this.spawnAt(x, y);
+  }
+
   spawn(width: number, height: number) {
-    super.spawn(width, height);
+    // Spawn the asteroid outside the screen.
+    const x = Phaser.Math.Between(0, 1) ? -this.width : width + this.width;
+    const y = Phaser.Math.Between(0, 1) ? -this.height : height + this.height;
+
+    this.spawnAt(x, y);
+  }
+
+  spawnAt(x: number, y: number) {
+    super.spawn(x, y);
 
     this.lives = this.config.lives;
     this.score = this.config.score;
 
-    // Spawn the asteroid outside the screen.
-    const x = Phaser.Math.Between(0, 1) ? -this.width : width + this.width;
-    const y = Phaser.Math.Between(0, 1) ? -this.height : height + this.height;
     this.setPosition(x, y);
 
     const angle = Phaser.Math.Between(0, 360);

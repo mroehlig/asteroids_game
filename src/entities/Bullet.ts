@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 
-interface BulletType {
+interface BulletConfig {
   name: string;
   width: number;
   height: number;
@@ -8,9 +8,9 @@ interface BulletType {
 
 export default class Bullet extends Phaser.Physics.Matter.Sprite {
   public static readonly types = {
-    small: { name: "bullet-small", width: 8, height: 4 },
-    long: { name: "bullet-long", width: 16, height: 8 },
-    bomb: { name: "bullet-bomb", width: 8, height: 8 },
+    small: { name: "bullet-small", type: "bullet", width: 8, height: 4 },
+    long: { name: "bullet-long", type: "enemy", width: 16, height: 8 },
+    bomb: { name: "bullet-bomb", type: "bomb", width: 8, height: 8 },
   };
 
   static preload(scene: Phaser.Scene) {
@@ -30,14 +30,15 @@ export default class Bullet extends Phaser.Physics.Matter.Sprite {
     g.destroy();
   }
 
-  static getShape(type: BulletType) {
+  static getShape(config: BulletConfig) {
     return {
       type: "rectangle",
-      width: type.width,
-      height: type.height,
+      width: config.width,
+      height: config.height,
     };
   }
 
+  public config: BulletConfig;
   public damage = 1;
   private lifespan: number = 1000;
   private lifeTimer: number = 0;
@@ -45,13 +46,14 @@ export default class Bullet extends Phaser.Physics.Matter.Sprite {
   constructor(
     world: Phaser.Physics.Matter.World,
     bodyOptions: Phaser.Types.Physics.Matter.MatterBodyConfig,
-    type: BulletType,
+    config: BulletConfig,
     damage: number = 1,
     lifespan: number = 1000
   ) {
-    bodyOptions.shape = bodyOptions.shape || Bullet.getShape(type);
-    super(world, 0, 0, type.name, null, bodyOptions);
+    bodyOptions.shape = bodyOptions.shape || Bullet.getShape(config);
+    super(world, 0, 0, config.name, null, bodyOptions);
 
+    this.config = config;
     this.damage = damage;
     this.lifespan = lifespan;
 
@@ -87,5 +89,12 @@ export default class Bullet extends Phaser.Physics.Matter.Sprite {
       this.setVisible(false);
       this.world.remove(this.body, true);
     }
+  }
+
+  handleHit(_damage: number = 1) {
+    this.setActive(false);
+    this.setVisible(false);
+    this.world.remove(this.body, true);
+    this.lifeTimer = 0;
   }
 }

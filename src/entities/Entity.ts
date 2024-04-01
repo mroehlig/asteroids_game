@@ -55,7 +55,7 @@ export default abstract class Entity extends Phaser.Physics.Matter.Sprite {
     );
   }
 
-  spawn(_width: number, _height: number) {
+  spawn(_x: number, _y: number) {
     if (this.dead) {
       this.setActive(true);
       this.setVisible(true);
