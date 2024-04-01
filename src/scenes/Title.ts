@@ -92,13 +92,18 @@ export default class Title extends Phaser.Scene {
     const asteroidsCollisionCategory = this.matter.world.nextCategory();
     this.asteroids = [];
     for (let i = 0; i < 10; i++) {
-      const asteroid = new Asteroid(this.matter.world, {
-        collisionFilter: {
-          category: asteroidsCollisionCategory,
-          mask: asteroidsCollisionCategory,
+      const asteroid = new Asteroid(
+        this.matter.world,
+        {
+          collisionFilter: {
+            category: asteroidsCollisionCategory,
+            mask: asteroidsCollisionCategory,
+          },
+          plugin: wrapBounds,
         },
-        plugin: wrapBounds,
-      });
+        // Select random asteroid type.
+        Phaser.Math.RND.pick(Object.values(Asteroid.configs)).type
+      );
       asteroid.spawn(width, height);
       this.add.existing(asteroid);
       this.asteroids.push(asteroid);

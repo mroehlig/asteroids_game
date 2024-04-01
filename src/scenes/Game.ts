@@ -5,7 +5,7 @@ import Entity from "../entities/Entity";
 import Ship from "../entities/Ship";
 import Bullet from "../entities/Bullet";
 import Enemy from "../entities/Enemy";
-import Asteroid from "../entities/Asteroid";
+import Asteroid, { AsteroidType } from "../entities/Asteroid";
 import Input from "../Input";
 
 export default class Game extends Phaser.Scene {
@@ -187,32 +187,38 @@ export default class Game extends Phaser.Scene {
     );
   }
 
-  spawnAsteroid() {
+  spawnAsteroid(type: AsteroidType) {
     const { width, height } = this.game.canvas;
 
     // Find inactive asteroid.
-    const inactiveAsteroid = this.asteroids.find((a) => !a.active);
+    const inactiveAsteroid = this.asteroids.find(
+      (a) => !a.active && a.config.type === type
+    );
     if (inactiveAsteroid) {
       // Respawn asteroid.
       inactiveAsteroid.spawn(width, height);
     } else {
       // Create a new asteroid.
-      const asteroid = new Asteroid(this.matter.world, {
-        collisionFilter: {
-          category: this.asteroidsCollisionCategory,
-          mask:
-            this.shipCollisionCategory |
-            this.bulletCollisionCategory |
-            this.asteroidsCollisionCategory |
-            this.enemiesCollisionCategory,
-        },
-        plugin: {
-          wrap: {
-            min: { x: 0, y: 0 },
-            max: { x: width, y: height },
+      const asteroid = new Asteroid(
+        this.matter.world,
+        {
+          collisionFilter: {
+            category: this.asteroidsCollisionCategory,
+            mask:
+              this.shipCollisionCategory |
+              this.bulletCollisionCategory |
+              this.asteroidsCollisionCategory |
+              this.enemiesCollisionCategory,
+          },
+          plugin: {
+            wrap: {
+              min: { x: 0, y: 0 },
+              max: { x: width, y: height },
+            },
           },
         },
-      });
+        type
+      );
       asteroid.setOnDeath(this.onEnemyDeath.bind(this));
       asteroid.spawn(width, height);
       this.add.existing(asteroid);
@@ -349,13 +355,16 @@ export default class Game extends Phaser.Scene {
     this.lastInput = input.down;
 
     // Spawn asteroid.
-    // if (time > this.asteroidTimer + 5000) {
-    //   this.asteroidTimer = time;
-    //   this.spawnAsteroid();
-    // }
+    if (time > this.asteroidTimer + 5000) {
+      this.asteroidTimer = time;
+
+      // Random asteroid type.
+      const type = Phaser.Math.RND.pick(Object.values(Asteroid.configs)).type;
+      this.spawnAsteroid(type);
+    }
 
     // Spawn enemy.
-    if (time > this.enemiesTimer + 8000) {
+    if (time > this.enemiesTimer + 30000) {
       this.enemiesTimer = time;
       this.spawnEnemy();
     }
